@@ -159,12 +159,17 @@ class AgentsTable(KeyboardDataTable):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.clicked_column_index: int | None = None
+        self.clicked_expand_control = False
+        self.click_serial = 0
 
     async def _on_click(self, event: events.Click) -> None:
         # Keep the clicked column so the app can distinguish the expand arrow
         # from the normal row-open action.
         self.clicked_column_index = None
+        self.clicked_expand_control = False
+        self.click_serial += 1
         previous_column = self.cursor_coordinate.column
+        x = event.get_content_offset_capture(self).x + int(self.scroll_x)
         meta = event.style.meta
         if "row" in meta and "column" in meta:
             row = meta.get("row")
@@ -172,22 +177,24 @@ class AgentsTable(KeyboardDataTable):
             if isinstance(row, int) and row >= 0 and isinstance(column, int):
                 self.clicked_column_index = column
         if self.clicked_column_index is None:
-            x = event.get_content_offset_capture(self).x + int(self.scroll_x)
             for column_index in range(len(self.columns)):
                 region = self._get_column_region(column_index)
                 if region.x <= x < region.x + region.width:
                     self.clicked_column_index = column_index
                     break
-        await super()._on_click(event)
+        if self.clicked_column_index == getattr(self.app, "agent_session_index", -1):
+            region = self._get_column_region(self.clicked_column_index)
+            self.clicked_expand_control = x < region.x + 5
         if (
-            self.cursor_type == "row"
-            and self.clicked_column_index is not None
-            and self.clicked_column_index != previous_column
+            getattr(self.app, "inline_tmux", False)
+            or self.clicked_column_index != previous_column
         ):
             self._post_selected_message()
 
     def action_select_cursor(self) -> None:
         self.clicked_column_index = None
+        self.clicked_expand_control = False
+        self.click_serial = 0
         super().action_select_cursor()
 
 
@@ -630,6 +637,7 @@ class OCDeckApp(App[None]):
         self.agent_display_state_by_id: dict[str, str] = {}
         self.agent_attention_source_by_id: dict[str, str] = {}
         self.agent_session_index = -1
+        self._last_mobile_agent_click_serial = 0
 
     def compose(self) -> ComposeResult:
         yield Static(id="brand")
@@ -1773,7 +1781,8 @@ class OCDeckApp(App[None]):
         table = event.data_table
         key = str(event.row_key.value)
         table_id = table.id or ""
-        if self._rebuild_echo_ids.pop(table_id, None) == key:
+        if self._rebuild_echo_ids.get(table_id) == key:
+            self._rebuild_echo_ids.pop(table_id, None)
             return
         if table.id == "agents-table" and self._drop_next_agents_highlight:
             self._drop_next_agents_highlight = False
@@ -1807,10 +1816,15 @@ class OCDeckApp(App[None]):
     @on(DataTable.RowSelected)
     def on_row_selected(self, event: DataTable.RowSelected) -> None:
         if event.data_table.id in {"sessions-table", "agents-table"}:
+            if isinstance(event.data_table, AgentsTable) and self.inline_tmux:
+                click_serial = event.data_table.click_serial
+                if click_serial and click_serial == self._last_mobile_agent_click_serial:
+                    return
+                self._last_mobile_agent_click_serial = click_serial
             if (
                 isinstance(event.data_table, AgentsTable)
                 and event.row_key is not None
-                and event.data_table.clicked_column_index == self.agent_session_index
+                and event.data_table.clicked_expand_control
                 and self.agent_children_by_id.get(str(event.row_key.value))
             ):
                 event.data_table.clicked_column_index = None
@@ -1831,6 +1845,8 @@ class OCDeckApp(App[None]):
             # Desktop clicks select; Enter/o are the explicit open actions.
             # Inline/mobile mode keeps title-click as its direct attach gesture.
             if isinstance(event.data_table, SessionsTable) and self.inline_tmux:
+                self.action_open_session()
+            elif isinstance(event.data_table, AgentsTable) and self.inline_tmux:
                 self.action_open_session()
             return
         elif event.data_table.id == "projects-table":
@@ -2372,7 +2388,14 @@ class OCDeckApp(App[None]):
             try:
                 with self.suspend():
                     result = subprocess.run(
-                        ["tmux", "attach-session", "-t", name],
+                        [
+                            "tmux",
+                            "attach-session",
+                            "-f",
+                            "ignore-size",
+                            "-t",
+                            name,
+                        ],
                         cwd=directory,
                         env=environment,
                         check=False,

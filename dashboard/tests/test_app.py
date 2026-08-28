@@ -617,6 +617,39 @@ class AppTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(app.selected_project_id, "p1")
             self.assertEqual(sessions.row_count, 3)
 
+    async def test_refresh_preserves_nonfirst_project_and_session_selection(self) -> None:
+        source = MultiProjectSource()
+        app = OCDeckApp(source, auto_refresh=False)
+        async with app.run_test(size=(140, 42)) as pilot:
+            await asyncio.sleep(0.1)
+            await pilot.press("1")
+            await pilot.pause()
+            projects = app.query_one("#projects-table", DataTable)
+            sessions = app.query_one("#sessions-table", DataTable)
+
+            sessions.move_cursor(row=0)
+            await pilot.pause()
+            projects.move_cursor(row=1)
+            await pilot.pause()
+            projects.focus()
+
+            self.assertEqual(app.selected_session_id, "s2")
+            self.assertEqual(app.selected_project_id, "p2")
+            self.assertFalse(app.project_filter)
+
+            app._apply_snapshot(await source.collect())
+            await pilot.pause()
+
+            self.assertFalse(app.project_filter)
+            self.assertEqual(app.selected_project_id, "p2")
+            self.assertEqual(app.selected_session_id, "s2")
+            self.assertEqual(
+                [str(row_key.value) for row_key in sessions.rows],
+                ["s2", "s3", "s1"],
+            )
+            selected = sessions.coordinate_to_cell_key(sessions.cursor_coordinate)
+            self.assertEqual(str(selected.row_key.value), "s2")
+
     async def test_subdirectory_sessions_match_project_root(self) -> None:
         app = OCDeckApp(MultiProjectSource(), auto_refresh=False)
         async with app.run_test(size=(140, 42)):
@@ -1190,6 +1223,60 @@ class AppTests(unittest.IsolatedAsyncioTestCase):
             app._attach_live_terminal = lambda session: opened.append(session.id) or True
             await pilot.press("enter")
             self.assertEqual(opened, ["session-1"])
+
+    async def test_mobile_agent_opens_on_first_click(self) -> None:
+        app = OCDeckApp(FakeSource(), auto_refresh=False, inline_tmux=True)
+        async with app.run_test(size=(50, 30)) as pilot:
+            await asyncio.sleep(0.1)
+            agents = app.query_one("#agents-table", DataTable)
+            opened: list[str] = []
+            app._attach_live_terminal = lambda session: opened.append(session.id) or True
+            session_column = agents._get_column_region(app.agent_session_index)
+            first_row = agents._get_row_region(0)
+
+            await pilot.click(
+                agents,
+                offset=(session_column.x + 1, first_row.y),
+            )
+            await pilot.pause()
+
+            self.assertEqual(opened, ["session-1"])
+
+    async def test_mobile_parent_name_opens_while_arrow_expands(self) -> None:
+        class SubagentSource(FakeSource):
+            async def collect(self) -> DashboardSnapshot:
+                snapshot = await super().collect()
+                parent = replace(snapshot.sessions[0], id="parent", title="Home Agent")
+                child = replace(
+                    parent,
+                    id="child",
+                    title="Project worker",
+                    agent_parent_id=parent.id,
+                    status="busy",
+                    terminals=("oc-child",),
+                )
+                return replace(snapshot, sessions=(child, parent))
+
+        app = OCDeckApp(SubagentSource(), auto_refresh=False, inline_tmux=True)
+        async with app.run_test(size=(50, 30)) as pilot:
+            await asyncio.sleep(0.1)
+            agents = app.query_one("#agents-table", DataTable)
+            opened: list[str] = []
+            app._attach_live_terminal = lambda session: opened.append(session.id) or True
+            session_column = agents._get_column_region(app.agent_session_index)
+            first_row = agents._get_row_region(0)
+
+            await pilot.click(agents, offset=(session_column.x + 7, first_row.y))
+            await pilot.pause()
+            self.assertEqual(opened, ["parent"])
+            self.assertEqual([str(key.value) for key in agents.rows], ["parent"])
+
+            await pilot.click(agents, offset=(session_column.x + 2, first_row.y))
+            await pilot.pause()
+            self.assertTrue(agents.clicked_expand_control)
+            self.assertEqual(
+                [str(key.value) for key in agents.rows], ["parent", "child"]
+            )
 
     async def test_agents_board_expands_live_subagents_with_left_arrow(self) -> None:
         class SubagentSource(FakeSource):
@@ -1844,7 +1931,17 @@ class AppTests(unittest.IsolatedAsyncioTestCase):
             self.assertGreater(payload["updatedMs"], 0)
             self.assertEqual(target.stat().st_mode & 0o777, 0o600)
             command = run.call_args.args[0]
-            self.assertEqual(command, ["tmux", "attach-session", "-t", "oc-s3"])
+            self.assertEqual(
+                command,
+                [
+                    "tmux",
+                    "attach-session",
+                    "-f",
+                    "ignore-size",
+                    "-t",
+                    "oc-s3",
+                ],
+            )
             self.assertEqual(run.call_args.kwargs["cwd"], Path("/work/beta"))
             self.assertNotIn("TMUX", run.call_args.kwargs["env"])
 
