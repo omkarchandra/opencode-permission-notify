@@ -1,0 +1,9 @@
+[Unit]
+Description=Monitor Home Agent project tasks
+After=network-online.target opencode-web.service
+Wants=network-online.target opencode-web.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flock -n %t/home-agent-monitor.lock %h/.local/bin/home-agentctl monitor
+TimeoutStartSec=2min

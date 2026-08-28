@@ -1,0 +1,13 @@
+.obsidian/
+project_notes/
+.claude/
+opencode-data/
+**/.playwright-mcp/
+__pycache__/
+.pytest_cache/
+.venv/
+home_agent/state/runtime.json
+home_agent/state/tasks.json
+home_agent/state/briefings.json
+hp-omen-*.txt
+hp-omen-*.bcd

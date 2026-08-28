@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Home Agent tasks every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1min
+AccuracySec=10s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

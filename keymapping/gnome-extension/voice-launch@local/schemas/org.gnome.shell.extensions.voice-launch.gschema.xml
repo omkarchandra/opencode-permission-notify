@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.voice-launch"
+          path="/org/gnome/shell/extensions/voice-launch/">
+    <key name="push-to-talk" type="as">
+      <default>['&lt;Hyper&gt;v']</default>
+      <summary>Push-to-talk the voice microphone listener</summary>
+      <description>Tap once to record and again to submit one utterance through the OpenCode Home Agent voice route.</description>
+    </key>
+  </schema>
+</schemalist>

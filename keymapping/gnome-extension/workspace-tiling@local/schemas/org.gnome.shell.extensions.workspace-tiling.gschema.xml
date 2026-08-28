@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.workspace-tiling" path="/org/gnome/shell/extensions/workspace-tiling/">
+    <key type="as" name="cycle-quarterv">
+      <default>["&lt;Control&gt;&lt;Alt&gt;1"]</default>
+      <summary>Cycle vertical 1/4 columns (left to right)</summary>
+    </key>
+    <key type="as" name="cycle-quarter">
+      <default>[]</default>
+      <summary>Cycle quarter positions</summary>
+    </key>
+    <key type="as" name="cycle-half">
+      <default>["&lt;Control&gt;&lt;Alt&gt;2"]</default>
+      <summary>Cycle half positions</summary>
+    </key>
+    <key type="as" name="cycle-third">
+      <default>["&lt;Control&gt;&lt;Alt&gt;3"]</default>
+      <summary>Cycle third positions</summary>
+    </key>
+    <key type="as" name="cycle-threequarter">
+      <default>["&lt;Control&gt;&lt;Alt&gt;4"]</default>
+      <summary>Cycle three-quarter positions</summary>
+    </key>
+    <key type="as" name="half-left">
+      <default>[]</default>
+      <summary>Left half (owned by Rectangle extension by default)</summary>
+    </key>
+    <key type="as" name="half-right">
+      <default>[]</default>
+      <summary>Right half (owned by Rectangle extension by default)</summary>
+    </key>
+    <key type="as" name="half-up">
+      <default>[]</default>
+      <summary>Top half (owned by Rectangle extension by default)</summary>
+    </key>
+    <key type="as" name="half-down">
+      <default>[]</default>
+      <summary>Bottom half (owned by Rectangle extension by default)</summary>
+    </key>
+    <key type="as" name="hyper-6">
+      <default>["&lt;Hyper&gt;6", "&lt;Super&gt;6"]</default>
+      <summary>Focus or launch Chrome with Hyper+6 or Super+6</summary>
+    </key>
+    <key type="as" name="hyper-7">
+      <default>["&lt;Hyper&gt;7", "&lt;Super&gt;7"]</default>
+      <summary>Focus or launch Ptyxis with Hyper+7 or Super+7</summary>
+    </key>
+    <key type="as" name="hyper-8">
+      <default>["&lt;Hyper&gt;8"]</default>
+      <summary>Focus or launch Obsidian with Hyper+8</summary>
+    </key>
+    <key type="s" name="app-id-6">
+      <default>"google-chrome.desktop"</default>
+      <summary>Desktop id for app 6</summary>
+    </key>
+    <key type="s" name="app-id-7">
+      <default>"org.gnome.Ptyxis.desktop"</default>
+      <summary>Desktop id for app 7</summary>
+    </key>
+    <key type="s" name="app-id-8">
+      <default>"obsidian_md.obsidian.Obsidian.desktop"</default>
+      <summary>Desktop id for app 8</summary>
+    </key>
+    <key type="b" name="show-indicator">
+      <default>true</default>
+      <summary>Show top-bar indicator</summary>
+    </key>
+  </schema>
+</schemalist>

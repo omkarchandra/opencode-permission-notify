@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.caps-obsidian"
+          path="/org/gnome/shell/extensions/caps-obsidian/">
+    <key name="focus-obsidian" type="as">
+      <default>['&lt;Super&gt;8']</default>
+      <summary>Focus or launch the existing Obsidian vault with Super+8</summary>
+    </key>
+    <key name="restore-all-windows" type="as">
+      <default>[]</default>
+      <summary>Restore all minimized windows on the active workspace</summary>
+    </key>
+  </schema>
+</schemalist>

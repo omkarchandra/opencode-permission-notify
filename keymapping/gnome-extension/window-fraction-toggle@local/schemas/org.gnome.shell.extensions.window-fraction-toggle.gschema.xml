@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.window-fraction-toggle" path="/org/gnome/shell/extensions/window-fraction-toggle/">
+    <key name="toggle-quarters" type="as">
+      <default>['&lt;Control&gt;&lt;Alt&gt;1']</default>
+      <summary>Toggle left and right quarters</summary>
+    </key>
+    <key name="toggle-thirds" type="as">
+      <default>['&lt;Control&gt;&lt;Alt&gt;3']</default>
+      <summary>Toggle left and right thirds</summary>
+    </key>
+    <key name="toggle-three-quarters" type="as">
+      <default>['&lt;Control&gt;&lt;Alt&gt;4']</default>
+      <summary>Toggle left and right three-quarter positions</summary>
+    </key>
+  </schema>
+</schemalist>

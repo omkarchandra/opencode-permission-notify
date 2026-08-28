@@ -1,0 +1,466 @@
+#!/usr/bin/python3
+
+import fcntl
+import html
+import os
+import re
+import secrets
+import subprocess
+import sys
+import time
+
+
+APP_NAME = "Kinesis Dictionary"
+MAX_TERM_LENGTH = 160
+MAX_NOTIFICATION_LENGTH = 1800
+
+
+def run(command, *, input_data=None, timeout=3):
+    return subprocess.run(
+        command,
+        input=input_data,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        timeout=timeout,
+        check=False,
+    )
+
+
+def notify(title, body, urgency="normal"):
+    subprocess.run(
+        [
+            "notify-send",
+            f"--app-name={APP_NAME}",
+            f"--urgency={urgency}",
+            "--expire-time=15000",
+            "--hint=string:x-canonical-private-synchronous:kinesis-dictionary",
+            html.escape(title),
+            html.escape(body[:MAX_NOTIFICATION_LENGTH]),
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
+
+POPUP_CSS = """
+.dictionary-popup {
+    background-color: rgba(28, 28, 32, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+}
+.dictionary-popup .word {
+    font-size: 17px;
+    font-weight: 700;
+    color: #ffffff;
+}
+.dictionary-popup .definition {
+    font-size: 14px;
+    color: #dcdcdc;
+    line-height: 1.45;
+}
+"""
+
+
+def show_popup(title, body, urgency="normal"):
+    try:
+        import gi
+
+        gi.require_version("Gtk", "4.0")
+        gi.require_version("Gdk", "4.0")
+        from gi.repository import Gdk, GLib, Gtk
+    except Exception:
+        notify(title, body, urgency)
+        return
+
+    provider = Gtk.CssProvider()
+    provider.load_from_data(POPUP_CSS.encode())
+    Gtk.StyleContext.add_provider_for_display(
+        Gdk.Display.get_default(),
+        provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+    )
+
+    window = Gtk.Window()
+    window.set_decorated(False)
+    window.set_resizable(False)
+    window.add_css_class("dictionary-popup")
+
+    outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    outer.set_margin_top(14)
+    outer.set_margin_bottom(14)
+    outer.set_margin_start(16)
+    outer.set_margin_end(16)
+
+    header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+    icon = Gtk.Image.new_from_icon_name("accessories-dictionary")
+    icon.set_pixel_size(28)
+    title_label = Gtk.Label(
+        label=f"<b>{GLib.markup_escape_text(title)}</b>",
+        use_markup=True,
+        wrap=True,
+        xalign=0,
+    )
+    title_label.add_css_class("word")
+    header.append(icon)
+    header.append(title_label)
+
+    body_label = Gtk.Label(
+        label=GLib.markup_escape_text(body[:MAX_NOTIFICATION_LENGTH]),
+        wrap=True,
+        justify=Gtk.Justification.LEFT,
+        xalign=0,
+        selectable=True,
+    )
+    body_label.add_css_class("definition")
+    body_label.set_max_width_chars(58)
+
+    scroll = Gtk.ScrolledWindow()
+    scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    scroll.set_child(body_label)
+    scroll.set_max_content_height(300)
+    scroll.set_min_content_width(360)
+
+    outer.append(header)
+    outer.append(scroll)
+    window.set_child(outer)
+
+    loop = GLib.MainLoop()
+
+    def on_key_pressed(_controller, keyval, _keycode, _state):
+        if keyval == Gdk.KEY_Escape:
+            loop.quit()
+            return True
+        return False
+
+    key_controller = Gtk.EventControllerKey()
+    key_controller.connect("key-pressed", on_key_pressed)
+    window.add_controller(key_controller)
+
+    def close_popup():
+        loop.quit()
+        return GLib.SOURCE_REMOVE
+
+    GLib.timeout_add_seconds(25, close_popup)
+
+    window.present()
+    window.connect("destroy", lambda _widget: loop.quit())
+    loop.run()
+
+
+def show_popup_safe(title, body, urgency="normal"):
+    try:
+        show_popup(title, body, urgency)
+    except Exception as error:
+        log_path = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "kinesis-dictionary-errors.log")
+        try:
+            with open(log_path, "a", encoding="utf-8") as log_file:
+                log_file.write(f"{time.strftime('%H:%M:%S')} popup fallback: {type(error).__name__}: {error}\n")
+        except OSError:
+            pass
+        notify(title, body, urgency)
+
+
+
+def snapshot_clipboard(primary=False):
+    selection = ["--primary"] if primary else []
+    types_result = run(["wl-paste", *selection, "--list-types"], timeout=1)
+    if types_result.returncode != 0:
+        return None
+
+    types = types_result.stdout.decode("utf-8", errors="replace").splitlines()
+    preferred = (
+        "text/plain;charset=utf-8",
+        "UTF8_STRING",
+        "text/plain",
+        "image/png",
+    )
+    mime_type = next((item for item in preferred if item in types), None)
+    if mime_type is None and types:
+        mime_type = types[0]
+    if mime_type is None:
+        return None
+
+    content = run(["wl-paste", *selection, "--type", mime_type], timeout=2)
+    if content.returncode != 0:
+        return None
+    return mime_type, content.stdout
+
+
+def set_clipboard_text(text, primary=False):
+    selection = ["--primary"] if primary else []
+    run(
+        ["wl-copy", *selection, "--type", "text/plain;charset=utf-8"],
+        input_data=text.encode("utf-8"),
+        timeout=2,
+    )
+
+
+def restore_clipboard(snapshot, primary=False):
+    selection = ["--primary"] if primary else []
+    if snapshot is None:
+        run(["wl-copy", *selection, "--clear"], timeout=1)
+        return
+
+    mime_type, content = snapshot
+    run(
+        ["wl-copy", *selection, "--type", mime_type],
+        input_data=content,
+        timeout=2,
+    )
+
+
+def clipboard_text(primary=False):
+    selection = ["--primary"] if primary else []
+    result = run(["wl-paste", *selection, "--no-newline"], timeout=1)
+    if result.returncode != 0:
+        return ""
+    return result.stdout.decode("utf-8", errors="replace")
+
+
+def send_copy():
+    # Linux input codes: KEY_LEFTCTRL=29, KEY_C=46.
+    result = run(
+        ["ydotool", "key", "--key-delay=20", "29:1", "46:1", "46:0", "29:0"],
+        timeout=2,
+    )
+    return result.returncode == 0
+
+
+def capture_term():
+    snapshot = snapshot_clipboard()
+    primary_snapshot = snapshot_clipboard(primary=True)
+    sentinel = f"kinesis-dictionary-{secrets.token_hex(16)}"
+
+    try:
+        # Wayland PRIMARY exposes highlighted text without sending a copy
+        # shortcut, which would interrupt terminal applications such as Ptyxis.
+        selected = clipboard_text(primary=True)
+        if selected:
+            try:
+                normalize_term(selected)
+                return selected
+            except RuntimeError:
+                pass
+
+        set_clipboard_text(sentinel, primary=True)
+        click = run(
+            ["ydotool", "click", "--repeat=2", "--next-delay=25", "0xC0"],
+            timeout=2,
+        )
+        if click.returncode != 0:
+            raise RuntimeError("Could not select the word under the pointer")
+        time.sleep(0.25)
+        selected = clipboard_text(primary=True)
+
+        if not selected or selected == sentinel:
+            set_clipboard_text(sentinel)
+            time.sleep(0.08)
+            if not send_copy():
+                raise RuntimeError("Could not copy the selected word")
+            time.sleep(0.18)
+            selected = clipboard_text()
+
+        if not selected or selected == sentinel:
+            raise RuntimeError("No text was selected and no word was found under the pointer")
+        return selected
+    finally:
+        restore_clipboard(primary_snapshot, primary=True)
+        restore_clipboard(snapshot)
+
+
+def normalize_term(text):
+    term = re.sub(r"\s+", " ", text).strip()
+    term = re.sub(r"^[^\w]+|[^\w]+$", "", term, flags=re.UNICODE)
+    if not term:
+        raise RuntimeError("The selection does not contain a word")
+    if len(term) > MAX_TERM_LENGTH:
+        raise RuntimeError("The selected text is too long for a dictionary lookup")
+    return term
+
+
+def dictionary_output(database, term):
+    result = run(
+        ["dict", "-h", "127.0.0.1", "-d", database, term],
+        timeout=5,
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout.decode("utf-8", errors="replace")
+
+
+def parse_wordnet(output, term):
+    senses = []
+    current = None
+    sense_pattern = re.compile(r"^\s*(adj|adv|n|v)\s+\d+:\s*(.*)$")
+
+    for line in output.splitlines():
+        match = sense_pattern.match(line)
+        if match:
+            if current:
+                senses.append(current)
+            current = f"{match.group(1)}: {match.group(2).strip()}"
+        elif current and line.startswith(" "):
+            current += f" {line.strip()}"
+    if current:
+        senses.append(current)
+
+    cleaned = []
+    for sense in senses[:4]:
+        sense = sense.replace("{", "").replace("}", "")
+        cleaned.append(sense)
+    return "\n".join(cleaned)
+
+
+def parse_gcide(output, term):
+    lines = []
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(("From ", "[1913 Webster]", "[PJC]")):
+            continue
+        if stripped.lower() == term.lower() or stripped.startswith(f"{term} \\"):
+            continue
+        lines.append(stripped)
+    return " ".join(lines)[:MAX_NOTIFICATION_LENGTH]
+
+
+def suggestions(term):
+    result = run(["dict", "-h", "127.0.0.1", "-m", term], timeout=5)
+    if result.returncode != 0:
+        return ""
+    matches = []
+    for line in result.stdout.decode("utf-8", errors="replace").splitlines():
+        match = re.match(r'^\S+\s+"(.+)"$', line.strip())
+        if match and match.group(1) not in matches:
+            matches.append(match.group(1))
+    return ", ".join(matches[:8])
+
+
+POS_LABELS = {"noun": "noun", "verb": "verb", "adj": "adjective", "adv": "adverb"}
+
+
+def wordnet_overview(term):
+    result = run(["wn", term, "-over"], timeout=3)
+    return result.stdout.decode("utf-8", errors="replace")
+
+
+def parse_overview(text):
+    senses = []
+    current_pos = None
+    for line in text.splitlines():
+        match = re.match(r"^Overview of (\w+) ", line)
+        if match:
+            current_pos = match.group(1)
+            continue
+        match = re.match(r"^\s*\d+\.\s*(.*)$", line)
+        if match and current_pos:
+            sense = re.sub(r"^\(\d+\)\s*", "", match.group(1)).strip()
+            label = POS_LABELS.get(current_pos, current_pos)
+            senses.append(f"{label} — {sense}")
+    return "\n".join(senses[:5])
+
+
+def collect_relatives(term, family, positions):
+    found = []
+    for pos in positions:
+        result = run(["wn", term, f"-{family}{pos}"], timeout=2)
+        output = result.stdout.decode("utf-8", errors="replace")
+        if not output:
+            continue
+        for line in output.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("Sense", "Antonyms", "Similarity", "Synonyms")):
+                continue
+            if "=>" in stripped:
+                if family == "hype":
+                    for word in re.findall(r"[\w'-]+", stripped.split("=>", 1)[1]):
+                        if word.isalpha() and word not in found:
+                            found.append(word)
+                continue
+            if "->" in stripped:
+                if family == "ants":
+                    for word in re.findall(r"[\w'-]+", stripped.split("->", 1)[1]):
+                        if word.isalpha() and word not in found:
+                            found.append(word)
+                continue
+            if family == "syns" and re.fullmatch(r"[\w', -]+", stripped):
+                for word in re.split(r",\s*", stripped):
+                    if word.isalpha() and word not in found:
+                        found.append(word)
+    return found
+
+
+def build_definition(term):
+    overview = parse_overview(wordnet_overview(term))
+    if not overview:
+        return "", ""
+
+    sections = [overview]
+    synonyms = collect_relatives(term, "syns", ("n", "v", "a", "r"))[:10]
+    hypernyms = collect_relatives(term, "hype", ("n", "v"))[:6]
+    antonyms = collect_relatives(term, "ants", ("n", "v", "a", "r"))[:6]
+
+    if synonyms:
+        sections.append(f"Synonyms: {', '.join(synonyms)}")
+    if hypernyms:
+        sections.append(f"Hypernyms: {', '.join(hypernyms)}")
+    if antonyms:
+        sections.append(f"Antonyms: {', '.join(antonyms)}")
+
+    return term, "\n\n".join(sections)
+
+
+def lookup(term):
+    title, body = build_definition(term)
+    if body:
+        show_popup_safe(title, body)
+        return 0
+
+    output = dictionary_output("wn", term)
+    definition = parse_wordnet(output, term) if output else ""
+    source = "WordNet"
+
+    if not definition:
+        output = dictionary_output("gcide", term)
+        definition = parse_gcide(output, term) if output else ""
+        source = "GCIDE"
+
+    if definition:
+        show_popup_safe(f"{term} — {source}", definition)
+        return 0
+
+    close_matches = suggestions(term)
+    message = "No local definition was found."
+    if close_matches:
+        message += f"\nClose matches: {close_matches}"
+    show_popup_safe(term, message, urgency="low")
+    return 1
+
+
+def main():
+    lock_path = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "kinesis-dictionary.lock")
+    with open(lock_path, "w", encoding="utf-8") as lock_file:
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return 0
+
+        try:
+            raw_term = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else capture_term()
+            return lookup(normalize_term(raw_term))
+        except (RuntimeError, subprocess.TimeoutExpired) as error:
+            log_path = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "kinesis-dictionary-errors.log")
+            try:
+                with open(log_path, "a", encoding="utf-8") as log_file:
+                    log_file.write(f"{time.strftime('%H:%M:%S')} {error}\n")
+            except OSError:
+                pass
+            show_popup_safe("Dictionary lookup failed", str(error), urgency="critical")
+            return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

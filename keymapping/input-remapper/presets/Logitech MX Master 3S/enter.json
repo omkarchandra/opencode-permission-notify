@@ -1,0 +1,25 @@
+[
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 275
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 28
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 276
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 183,
+    "name": "Dictionary lookup"
+  }
+]

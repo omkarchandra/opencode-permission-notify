@@ -1,0 +1,13 @@
+[
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 58
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 125
+  }
+]

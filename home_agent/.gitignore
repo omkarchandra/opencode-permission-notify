@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.playwright-mcp/
+state/.lock
+state/.*.tmp
+state/runtime.json
+state/tasks.json
+state/briefings.json
+reports/

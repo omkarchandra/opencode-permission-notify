@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Bind Ctrl+Shift+4 to GNOME's direct full-screen screenshot action
+# (same action as Shift+Print). Idempotent: run any time to restore.
+#
+#   gsettings key: org.gnome.shell.keybindings screenshot
+set -euo pipefail
+
+SCHEMA="org.gnome.shell.keybindings"
+KEY="screenshot"
+ACCEL="<Control><Shift>4"
+
+current="$(gsettings get "$SCHEMA" "$KEY")"
+
+if [[ "$current" == *"$ACCEL"* ]]; then
+  echo "already bound: $current"
+  exit 0
+fi
+
+# Append the accelerator inside the existing array:
+# ['<Shift>Print'] -> ['<Shift>Print', '<Control><Shift>4']
+gsettings set "$SCHEMA" "$KEY" "${current%]}, '$ACCEL']"
+
+echo "bound: $(gsettings get "$SCHEMA" "$KEY")"

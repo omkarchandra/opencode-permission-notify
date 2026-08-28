@@ -1,0 +1,7 @@
+{
+  "uuid": "window-fraction-toggle@local",
+  "name": "Window Fraction Toggle",
+  "description": "Toggle the focused window between left and right screen fractions.",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.window-fraction-toggle"
+}

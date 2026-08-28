@@ -1,0 +1,12 @@
+[Unit]
+Description=Kinesis dictionary F13 listener
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/kinesis-f13-listener
+Restart=always
+RestartSec=5
+PassEnvironment=WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS XDG_CURRENT_DESKTOP XDG_SESSION_TYPE
+
+[Install]
+WantedBy=default.target

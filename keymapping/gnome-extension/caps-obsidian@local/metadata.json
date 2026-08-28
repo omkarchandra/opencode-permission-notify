@@ -1,0 +1,7 @@
+{
+  "uuid": "caps-obsidian@local",
+  "name": "Local Hyper Shortcuts",
+  "description": "Focus the existing Obsidian vault with Super+8.",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.caps-obsidian"
+}

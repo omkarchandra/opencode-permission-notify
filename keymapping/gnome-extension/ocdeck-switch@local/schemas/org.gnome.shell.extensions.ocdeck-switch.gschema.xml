@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ocdeck-switch"
+          path="/org/gnome/shell/extensions/ocdeck-switch/">
+    <key name="launch-switch" type="as">
+      <default>[]</default>
+      <summary>Optional direct GNOME shortcut for OC Deck</summary>
+      <description>The evdev watcher normally owns Super+O and dispatches through this extension over D-Bus.</description>
+    </key>
+  </schema>
+</schemalist>

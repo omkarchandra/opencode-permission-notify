@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ocdeck"
+version = "0.1.0"
+description = "A terminal-native operations dashboard for OpenCode"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "textual==8.2.8",
+]
+
+[project.scripts]
+ocdeck = "ocdeck.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

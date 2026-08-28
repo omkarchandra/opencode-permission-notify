@@ -1,0 +1,58 @@
+#!/usr/bin/python3
+
+import subprocess
+import time
+from pathlib import Path
+
+import evdev
+from evdev.ecodes import EV_KEY
+
+HELPER = str(Path.home() / ".local/bin/kinesis-dictionary-lookup")
+DEVICE_NAME = "input-remapper keyboard"
+TRIGGER_CODE = 183  # KEY_F13
+
+
+def find_device():
+    for path in evdev.list_devices():
+        try:
+            device = evdev.InputDevice(path)
+        except OSError:
+            continue
+        if device.name == DEVICE_NAME:
+            return device
+        device.close()
+    return None
+
+
+def main():
+    while True:
+        device = find_device()
+        if device is None:
+            time.sleep(3)
+            continue
+        print(f"Listening for F13 on {device.path}", flush=True)
+        try:
+            for event in device.read_loop():
+                if (
+                    event.type == EV_KEY
+                    and event.code == TRIGGER_CODE
+                    and event.value == 1
+                ):
+                    print("F13 pressed; launching dictionary helper", flush=True)
+                    subprocess.Popen(
+                        [HELPER],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+        except OSError:
+            pass
+        finally:
+            try:
+                device.close()
+            except OSError:
+                pass
+        time.sleep(3)
+
+
+if __name__ == "__main__":
+    main()

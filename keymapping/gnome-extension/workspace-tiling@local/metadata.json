@@ -1,0 +1,7 @@
+{
+  "uuid": "workspace-tiling@local",
+  "name": "Workspace Tiling + Caps Keys",
+  "description": "Rectangle-style cycling window tiling (Ctrl+Alt+1..4), Ctrl+Super+arrows halves, a top-bar menu to apply actions and rebind keys interactively, and deterministic Hyper/Super+6/7 plus Hyper+8 app focus/launch.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://localhost/local"
+}

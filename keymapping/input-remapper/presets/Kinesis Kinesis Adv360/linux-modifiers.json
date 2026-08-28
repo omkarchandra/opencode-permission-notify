@@ -1,0 +1,178 @@
+[
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 58
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 125
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 125
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_symbol": "key(Multi_key)",
+    "name": "Compose tap",
+    "release_combination_keys": false,
+    "macro_key_sleep_ms": 10
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 56
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 56
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 14
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 14,
+    "name": "Preserve Backspace"
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 42
+      },
+      {
+        "type": 1,
+        "code": 15
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 184,
+    "name": "Cycle OpenCode agents",
+    "release_combination_keys": false
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 54
+      },
+      {
+        "type": 1,
+        "code": 15
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 184,
+    "name": "Cycle OpenCode agents",
+    "release_combination_keys": false
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 125
+      },
+      {
+        "type": 1,
+        "code": 20
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_symbol": "modify(Control_L, key(t))",
+    "name": "New tab",
+    "release_combination_keys": false,
+    "macro_key_sleep_ms": 10
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 125
+      },
+      {
+        "type": 1,
+        "code": 17
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_symbol": "modify(Control_L, key(w))",
+    "name": "Close tab",
+    "release_combination_keys": false,
+    "macro_key_sleep_ms": 10
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 125
+      },
+      {
+        "type": 1,
+        "code": 22
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_symbol": "modify(Control_L, modify(Shift_L, key(Tab)))",
+    "name": "Previous tab",
+    "release_combination_keys": false,
+    "macro_key_sleep_ms": 10
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 125
+      },
+      {
+        "type": 1,
+        "code": 23
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_symbol": "modify(Control_L, key(Tab))",
+    "name": "Next tab",
+    "release_combination_keys": false,
+    "macro_key_sleep_ms": 10
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 125
+      },
+      {
+        "type": 1,
+        "code": 15
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_symbol": "modify(Super_L, key(Tab))",
+    "name": "Application switcher",
+    "release_combination_keys": false
+  },
+  {
+    "input_combination": [
+      {
+        "type": 1,
+        "code": 126
+      }
+    ],
+    "target_uinput": "keyboard",
+    "output_type": 1,
+    "output_code": 58
+  }
+]

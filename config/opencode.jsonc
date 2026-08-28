@@ -1,0 +1,54 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "server": {
+    "port": 4096,
+    "hostname": "127.0.0.1",
+    "mdns": false
+  },
+  "model": "opencode-go/ox-alpha-free",
+  "small_model": "opencode-go/ox-alpha-free",
+  "provider": {
+    "openrouter": {
+      "models": {
+        "dots-studio/dots-3-note-preview:free": { "name": "Dots3-Note Preview (free)" },
+        "thinkingmachines/inkling:free": {
+          "name": "Thinking Machines: Inkling (free)",
+          "attachment": true,
+          "reasoning": true,
+          "temperature": true,
+          "tool_call": true,
+          "cost": {
+            "input": 0,
+            "output": 0
+          },
+          "limit": {
+            "context": 1048576,
+            "input": 786432,
+            "output": 262144
+          },
+          "modalities": {
+            "input": ["text", "image", "audio"],
+            "output": ["text"]
+          }
+        }
+      }
+    }
+  },
+  "mcp": {
+    "signed_in_tabs": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@0.0.79",
+        "--extension",
+        "--image-responses",
+        "omit",
+        "--codegen",
+        "none"
+      ],
+      "enabled": true,
+      "timeout": 120000
+    }
+  }
+}

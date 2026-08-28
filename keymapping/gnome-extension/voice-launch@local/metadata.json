@@ -1,0 +1,7 @@
+{
+  "uuid": "voice-launch@local",
+  "name": "Voice Launch",
+  "description": "Top-bar button and push-to-talk shortcut that submit each utterance to a fresh OpenCode Home Agent session.",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.voice-launch"
+}

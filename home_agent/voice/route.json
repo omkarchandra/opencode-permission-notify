@@ -1,0 +1,18 @@
+{
+  "name": "home-agent",
+  "label": "Home Agent",
+  "priority": 100,
+  "always_confirm": true,
+  "keywords": [
+    "home agent",
+    "home_agent",
+    "project task",
+    "run project",
+    "start project",
+    "project status",
+    "project briefing",
+    "portfolio status"
+  ],
+  "safe_agent": "voice-home-agent",
+  "risky_agent": "voice-home-agent"
+}
